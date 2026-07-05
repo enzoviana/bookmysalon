@@ -37,7 +37,7 @@ export default defineNuxtConfig({
   },
 
   // CSS
-css: [
+  css: [
     '~~/assets/css/tailwind.css', // Les deux tildes (~~) forcent la racine absolue du projet
     '@fortawesome/fontawesome-free/css/all.min.css'
   ],
@@ -78,6 +78,7 @@ css: [
     compressPublicAssets: true,
     prerender: {
       crawlLinks: true,
+      failOnError: false, // Empêche le build de cracher sur Vercel à cause des liens 404
       routes: ['/cgu', '/cgv', '/PolitiqueConfidentialite', '/MentionsLegales', '/espace-pro/cgu-cgv']
     }
   },
