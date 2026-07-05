@@ -37,9 +37,9 @@ export default defineNuxtConfig({
     }
   },
 
-  // CSS
+  // CSS (Corrigé avec un seul tilde pour éviter les erreurs de résolution au build)
   css: [
-    '~~/assets/css/tailwind.css', // Les deux tildes (~~) forcent la racine absolue du projet
+    '~/assets/css/tailwind.css', 
     '@fortawesome/fontawesome-free/css/all.min.css'
   ],
 
@@ -90,6 +90,11 @@ export default defineNuxtConfig({
     name: 'BookMySalon',
     description: 'Réservez vos rendez-vous beauté et bien-être en ligne',
     defaultLocale: 'fr'
+  },
+
+  // Désactive la génération d'images OG dynamiques qui fait planter le postinstall sur Vercel
+  ogImage: {
+    enabled: false
   },
 
   // App configuration
