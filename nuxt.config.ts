@@ -1,7 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  
+  // Active les devtools UNIQUEMENT en local, empêche le crash sur Vercel
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
 
   // Define source directories at project root (not in app/ directory)
   srcDir: '.',
@@ -37,7 +39,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // CSS (Corrigé avec un seul tilde pour éviter les erreurs de résolution au build)
+  // CSS
   css: [
     '~/assets/css/tailwind.css', 
     '@fortawesome/fontawesome-free/css/all.min.css'
@@ -79,7 +81,7 @@ export default defineNuxtConfig({
     compressPublicAssets: true,
     prerender: {
       crawlLinks: true,
-      failOnError: false, // Empêche le build de cracher sur Vercel à cause des liens 404
+      failOnError: false, 
       routes: ['/cgu', '/cgv', '/PolitiqueConfidentialite', '/MentionsLegales', '/espace-pro/cgu-cgv']
     }
   },
@@ -92,7 +94,6 @@ export default defineNuxtConfig({
     defaultLocale: 'fr'
   },
 
-  // Désactive la génération d'images OG dynamiques qui fait planter le postinstall sur Vercel
   ogImage: {
     enabled: false
   },
