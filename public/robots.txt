@@ -15,6 +15,3 @@ Disallow: /signup
 Disallow: /auth/
 Disallow: /confirmation
 Disallow: /annulation
-
-# Crawl-delay pour éviter la surcharge
-Crawl-delay: 1
