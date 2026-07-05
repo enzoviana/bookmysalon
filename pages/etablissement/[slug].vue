@@ -468,7 +468,7 @@
 
 </template>
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 // 🔥 Forcer le mode SSR pour cette page (important pour SEO)
@@ -608,46 +608,173 @@ const isRevendique = computed(() => {
   return salon.value?.isActive === true
 })
 
+// 🔥 Fonction pour extraire la ville depuis l'adresse
+const extraireVille = () => {
+  if (!salon.value?.adresse && !salon.value?.ville) return ''
+
+  // Si le champ ville existe directement
+  if (salon.value.ville) return salon.value.ville
+
+  // Sinon, extraire de l'adresse (format: "10 rue X, 95120 Ermont" ou "10 rue X, Ermont")
+  const adresse = salon.value.adresse || ''
+  const parts = adresse.split(',')
+  if (parts.length >= 2) {
+    // Prendre la dernière partie et enlever le code postal si présent
+    const dernierePart = parts[parts.length - 1].trim()
+    return dernierePart.replace(/^\d{5}\s*/, '') // Enlever code postal type "95120 "
+  }
+
+  // Fallback: chercher un mot après une virgule
+  const match = adresse.match(/,\s*([A-Za-zÀ-ÿ\s-]+)$/i)
+  return match ? match[1].trim() : ''
+}
+
+// 🔥 Fonction pour obtenir la prestation principale (première catégorie)
+const getPrestationPrincipale = () => {
+  if (!salon.value?.categories || salon.value.categories.length === 0) return 'Beauté & Bien-être'
+
+  const premiereCategorie = salon.value.categories[0]
+  return premiereCategorie.nom || 'Beauté & Bien-être'
+}
+
+// 🔥 Construire le titre SEO optimisé (max 60 caractères)
+const titreSEO = computed(() => {
+  const nom = salon.value?.nom_societe || 'Salon'
+  const prestation = getPrestationPrincipale()
+  const ville = extraireVille()
+
+  let titre = ''
+  if (ville) {
+    titre = `${nom} - ${prestation} à ${ville} | BookMySalon`
+  } else {
+    titre = `${nom} - ${prestation} | BookMySalon`
+  }
+
+  // Limiter à 60 caractères pour Google
+  if (titre.length > 60) {
+    // Tronquer le nom du salon si nécessaire
+    const nomCourt = nom.substring(0, 30)
+    titre = `${nomCourt} - ${prestation} à ${ville} | BookMySalon`
+
+    // Si encore trop long, enlever "à [ville]"
+    if (titre.length > 60) {
+      titre = `${nomCourt} - ${prestation} | BookMySalon`
+    }
+  }
+
+  return titre
+})
+
+// 🔥 Construire la description SEO optimisée (max 155 caractères)
+const descriptionSEO = computed(() => {
+  const nom = salon.value?.nom_societe || 'notre salon'
+  const ville = extraireVille()
+  const prestation = getPrestationPrincipale()
+
+  // Extraire une spécificité depuis la description ou utiliser la prestation
+  let specificite = prestation
+  if (salon.value?.description && salon.value.description.length > 20) {
+    // Calculer l'espace disponible pour la spécificité
+    const baseLength = `Prenez rendez-vous en ligne chez ${nom} à ${ville}. . Consultez les avis, les horaires et réservez en 1 clic !`.length
+    const maxSpecificite = 155 - baseLength
+
+    specificite = salon.value.description.substring(0, Math.max(20, maxSpecificite)).trim()
+    if (salon.value.description.length > maxSpecificite) {
+      specificite = specificite.replace(/\s+\S*$/, '...') // Couper au dernier mot
+    }
+  }
+
+  let description = ''
+  if (ville) {
+    description = `Prenez rendez-vous en ligne chez ${nom} à ${ville}. ${specificite}. Consultez les avis, les horaires et réservez en 1 clic !`
+  } else {
+    description = `Prenez rendez-vous en ligne chez ${nom}. ${specificite}. Consultez les avis, les horaires et réservez en 1 clic !`
+  }
+
+  // Limite de sécurité à 155 caractères
+  if (description.length > 155) {
+    description = description.substring(0, 152) + '...'
+  }
+
+  return description
+})
+
 // 🔥 SEO : Métadonnées dynamiques pour Google
 useSeoMeta({
-  title: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
-  description: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
-  ogTitle: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
-  ogDescription: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
+  title: titreSEO,
+  description: descriptionSEO,
+  ogTitle: titreSEO,
+  ogDescription: descriptionSEO,
   ogImage: () => salon.value?.logo || salon.value?.image || '',
   ogUrl: () => `https://bookmysalon.fr/etablissement/${salonId.value}`,
   twitterCard: 'summary_large_image',
-  twitterTitle: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
-  twitterDescription: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
+  twitterTitle: titreSEO,
+  twitterDescription: descriptionSEO,
   twitterImage: () => salon.value?.logo || salon.value?.image || ''
 })
 
 // 🔥 Structured Data JSON-LD pour Google (LocalBusiness)
+const structuredData = computed(() => {
+  const ville = extraireVille()
+  const prestation = getPrestationPrincipale()
+
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: salon.value?.nom_societe || 'Salon',
+    description: descriptionSEO.value,
+    image: salon.value?.logo || salon.value?.image || '',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: salon.value?.adresse || '',
+      addressLocality: ville || salon.value?.ville || '',
+      addressCountry: 'FR'
+    },
+    telephone: salon.value?.telephone || '',
+    url: `https://bookmysalon.fr/etablissement/${salonId.value}`,
+    priceRange: '€€',
+    ...(noteGenerale.value && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: noteGenerale.value,
+        reviewCount: nombreAvis.value
+      }
+    })
+  }
+
+  // Ajouter les horaires d'ouverture si disponibles
+  if (salon.value?.horaires) {
+    const openingHours = []
+    const jours = {
+      lundi: 'Monday',
+      mardi: 'Tuesday',
+      mercredi: 'Wednesday',
+      jeudi: 'Thursday',
+      vendredi: 'Friday',
+      samedi: 'Saturday',
+      dimanche: 'Sunday'
+    }
+
+    for (const [jourFr, jourEn] of Object.entries(jours)) {
+      const horaire = salon.value.horaires[jourFr]
+      if (horaire && horaire.length > 0 && horaire[0].debut && horaire[0].fin) {
+        openingHours.push(`${jourEn} ${horaire[0].debut}-${horaire[0].fin}`)
+      }
+    }
+
+    if (openingHours.length > 0) {
+      data.openingHours = openingHours
+    }
+  }
+
+  return data
+})
+
 useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'LocalBusiness',
-        name: salon.value?.nom_societe || 'Salon',
-        description: salon.value?.description || '',
-        image: salon.value?.logo || salon.value?.image || '',
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: salon.value?.adresse || '',
-          addressLocality: salon.value?.ville || '',
-          addressCountry: 'FR'
-        },
-        telephone: salon.value?.telephone || '',
-        url: `https://bookmysalon.fr/etablissement/${salonId.value}`,
-        priceRange: '€€',
-        aggregateRating: noteGenerale.value ? {
-          '@type': 'AggregateRating',
-          ratingValue: noteGenerale.value,
-          reviewCount: nombreAvis.value
-        } : undefined
-      })
+      children: () => JSON.stringify(structuredData.value)
     }
   ]
 })
@@ -655,6 +782,19 @@ useHead({
 // 🔥 Comptabiliser la vue côté client uniquement (pas en SSR)
 if (import.meta.client && salon.value?._id && salon.value._id !== 'default') {
   comptabiliserVue(salon.value._id).catch(err => console.error('Erreur tracking vue:', err))
+}
+
+// 🔍 Debug SEO en mode développement
+if (import.meta.dev && import.meta.client) {
+  watch([titreSEO, descriptionSEO], () => {
+    console.group('🔍 SEO Debug')
+    console.log('📌 Titre:', titreSEO.value, `(${titreSEO.value.length} caractères)`)
+    console.log('📝 Description:', descriptionSEO.value, `(${descriptionSEO.value.length} caractères)`)
+    console.log('📍 Ville extraite:', extraireVille())
+    console.log('🎯 Prestation principale:', getPrestationPrincipale())
+    console.log('📊 Structured Data:', structuredData.value)
+    console.groupEnd()
+  }, { immediate: true })
 }
 function calculerPrixAvecPromo(service) {
   if (!promotions.value || promotions.value.length === 0) {
