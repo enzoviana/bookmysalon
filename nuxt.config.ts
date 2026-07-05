@@ -18,7 +18,8 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/icon',
     '@pinia/nuxt',
-    '@nuxtjs/seo'
+    '@nuxtjs/seo',
+    '@vercel/analytics'
   ],
 
   postcss: {

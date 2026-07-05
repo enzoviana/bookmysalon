@@ -1,0 +1,20 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.bookmysalon.fr/sitemap.xml
+
+# Fichiers à ne pas indexer
+Disallow: /api/
+Disallow: /admin/
+Disallow: /userAccount
+Disallow: /mes-rendez-vous
+Disallow: /rendez-vous/
+Disallow: /signup
+Disallow: /auth/
+Disallow: /confirmation
+Disallow: /annulation
+
+# Crawl-delay pour éviter la surcharge
+Crawl-delay: 1
