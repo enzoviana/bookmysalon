@@ -468,156 +468,194 @@
 
 </template>
 <script setup>
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
 
-
-
+// 🔥 Forcer le mode SSR pour cette page (important pour SEO)
+definePageMeta({
+  layout: 'default'
+})
 
 const route = useRoute()
 const router = useRouter()
 const salonId = computed(() => route.params.slug || route.params.id)
 const isSlug = computed(() => !!route.params.slug)
 
-// Salon par défaut si l'API ne renvoie rien
-const salon = ref({
-  _id: 'default',
-  telephone: '+33 1 23 45 67 89',
-  nom_societe: 'Salon Test Paris',
-  description: 'Un salon de test pour prévisualisation',
-  logo: 'https://cdn1.treatwell.net/images/view/v2.i7407486.w1080.h720.x441F3531/',
-  isActive: false, // Par défaut, le salon de test n'est pas actif
-  horaires: {
-    lundi: [{ debut: '09:00', fin: '19:00' }],
-    mardi: [{ debut: '09:00', fin: '19:00' }],
-    mercredi: [{ debut: '09:00', fin: '19:00' }],
-    jeudi: [{ debut: '09:00', fin: '19:00' }],
-    vendredi: [{ debut: '09:00', fin: '19:00' }],
-    samedi: [{ debut: '10:00', fin: '18:00' }],
-    dimanche: []
-  },
-  distance_km: 1.2,
-  rating: null,
-  nextAvailable: '10:00',
-  adresse: '10 rue de Test, Paris',
-  categories: [
-    {
-      _id: "cat1",
-      nom: "Coiffure",
-      services: [
-        { _id: "s1", nom: "Coupe homme", description: "Coupe classique homme", prix: 25, duree: 30 },
-        { _id: "s2", nom: "Coupe femme", description: "Coupe et brushing", prix: 40, duree: 45 },
-      ],
-    },
-    {
-      _id: "cat2",
-      nom: "Esthétique",
-      services: [
-        { _id: "s3", nom: "Manucure", description: "Soin complet des ongles", prix: 20, duree: 30 },
-        { _id: "s4", nom: "Épilation sourcils", description: "Épilation professionnelle", prix: 10, duree: 15 },
-      ],
-    },
-  ],
-  photos: [
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN7WZOC6Z02AYB48RLy7w23AV86ndJUvYrXw&s",
-  ],
-  administrateurs: [],
-})
-
-const avisList = ref([])
-const promotions = ref([])
-
-const noteEtablissement = ref(null)
-const notePrestations = ref(null)
-const noteEmploye = ref(null)
-const noteGenerale = ref(null)
-const nombreAvis = ref(0)
-
 const activeTab = ref('global')
 const showClaimModal = ref(false)
 const isSubmitting = ref(false)
 const claimForm = ref({ prenom: '', nom: '', email: '', telephone: '', message: '' })
 
-// Computed pour vérifier si l'établissement fait partie du réseau BookMySalon
-const isRevendique = computed(() => {
-  // Un salon est actif sur BookMySalon s'il a un abonnement actif
-  return salon.value.isActive === true
-})
-
-onMounted(async () => {
-  let salonChargeAvecSucces = false;
-
-  try {
+// 🔥 FETCH SSR : Charger les données du salon côté serveur
+const { data: salon } = await useAsyncData(
+  `salon-${salonId.value}`,
+  async () => {
     const endpoint = isSlug.value
       ? `https://bookmysalon-967a856b16b6.herokuapp.com/api/search/slug/${salonId.value}`
-      : `https://bookmysalon-967a856b16b6.herokuapp.com/api/search/${salonId.value}`;
+      : `https://bookmysalon-967a856b16b6.herokuapp.com/api/search/${salonId.value}`
 
-    // 1. Attente absolue de la requête principale du Salon
-    const { data: responseData } = await axios.get(endpoint);
-    const salonData = responseData?.data || responseData;
+    const response = await $fetch(endpoint)
+    const salonData = response?.data || response
 
-    if (salonData) {
-      salon.value = salonData;
-      salonChargeAvecSucces = true; // Le salon est en mémoire !
-
-      // Mise à jour des balises méta pour le SEO (Google les verra enfin)
-
-
-      
-    }
-
-    // 2. Traitement des requêtes dépendantes de l'ObjectId réel
-    const actualSalonId = salon.value?._id || salonId.value;
-    const isReadyForSubRequests = typeof actualSalonId === 'string' && /^[0-9a-fA-F]{24}$/.test(actualSalonId);
-
-    if (isReadyForSubRequests) {
-      // Exécution en parallèle des sous-requêtes pour gagner en vitesse
-      await Promise.allSettled([
-        comptabiliserVue(actualSalonId).catch(err => console.error('Erreur tracking vue:', err)),
-        
-        axios.get(`https://bookmysalon-967a856b16b6.herokuapp.com/api/avis/${actualSalonId}`)
-          .then(({ data: avisData }) => {
-            if (avisData && avisData.success && avisData.moyennes) {
-              noteEtablissement.value = avisData.moyennes.noteEtablissement;
-              notePrestations.value = avisData.moyennes.notePrestations;
-              noteEmploye.value = avisData.moyennes.noteEmploye;
-              noteGenerale.value = avisData.moyennes.noteGenerale;
-              avisList.value = avisData.avis || [];
-              nombreAvis.value = avisList.value.length;
-            }
-          }).catch(err => console.warn('Erreur avis:', err.message)),
-
-        axios.get(`https://bookmysalon-967a856b16b6.herokuapp.com/api/promotions/firm/${actualSalonId}`)
-          .then(({ data: promosData }) => {
-            if (promosData && promosData.success && promosData.promotions) {
-              promotions.value = promosData.promotions.filter(promo =>
-                promo.actif &&
-                new Date(promo.dateDebut) <= new Date() &&
-                new Date(promo.dateFin) >= new Date()
-              );
-            }
-          }).catch(() => console.log('Aucune promotion active'))
-      ]);
-    }
-
-  } catch (error) {
-    console.error('Erreur critique lors du chargement du salon :', error);
-  } finally {
-    // 3. Attendre que Vue finisse de mettre à jour le DOM avant de signaler à Prerender.io
-    if (typeof window !== 'undefined' && salonChargeAvecSucces) {
-      await nextTick(); // ⚠️ CRITIQUE: Attend que Vue ait rendu le DOM avec les nouvelles données
-      window.prerenderReady = true;
-      console.log('✅ Page prête pour Prerender.io avec données:', salon.value.nom_societe);
-    } else {
-      // Fallback: signaler quand même après un délai court pour éviter que Prerender attende indéfiniment
-      setTimeout(() => {
-        window.prerenderReady = true;
-        console.warn('⚠️ Page signalée à Prerender.io sans données complètes');
-      }, 2000);
-    }
+    console.log('✅ [SSR] Données salon chargées:', salonData?.nom_societe)
+    return salonData
+  },
+  {
+    // Salon par défaut si l'API échoue
+    default: () => ({
+      _id: 'default',
+      telephone: '+33 1 23 45 67 89',
+      nom_societe: 'Salon Test Paris',
+      description: 'Un salon de test pour prévisualisation',
+      logo: 'https://cdn1.treatwell.net/images/view/v2.i7407486.w1080.h720.x441F3531/',
+      isActive: false,
+      horaires: {
+        lundi: [{ debut: '09:00', fin: '19:00' }],
+        mardi: [{ debut: '09:00', fin: '19:00' }],
+        mercredi: [{ debut: '09:00', fin: '19:00' }],
+        jeudi: [{ debut: '09:00', fin: '19:00' }],
+        vendredi: [{ debut: '09:00', fin: '19:00' }],
+        samedi: [{ debut: '10:00', fin: '18:00' }],
+        dimanche: []
+      },
+      distance_km: 1.2,
+      rating: null,
+      nextAvailable: '10:00',
+      adresse: '10 rue de Test, Paris',
+      categories: [
+        {
+          _id: "cat1",
+          nom: "Coiffure",
+          services: [
+            { _id: "s1", nom: "Coupe homme", description: "Coupe classique homme", prix: 25, duree: 30 },
+            { _id: "s2", nom: "Coupe femme", description: "Coupe et brushing", prix: 40, duree: 45 },
+          ],
+        },
+        {
+          _id: "cat2",
+          nom: "Esthétique",
+          services: [
+            { _id: "s3", nom: "Manucure", description: "Soin complet des ongles", prix: 20, duree: 30 },
+            { _id: "s4", nom: "Épilation sourcils", description: "Épilation professionnelle", prix: 10, duree: 15 },
+          ],
+        },
+      ],
+      photos: [
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQN7WZOC6Z02AYB48RLy7w23AV86ndJUvYrXw&s",
+      ],
+      administrateurs: [],
+    })
   }
-});
+)
+
+// 🔥 FETCH SSR : Avis
+const { data: avisData } = await useAsyncData(
+  `avis-${salon.value?._id}`,
+  async () => {
+    if (!salon.value?._id || salon.value._id === 'default') return null
+
+    try {
+      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/avis/${salon.value._id}`)
+      console.log('✅ [SSR] Avis chargés')
+      return response
+    } catch (error) {
+      console.warn('⚠️ [SSR] Erreur avis:', error.message)
+      return null
+    }
+  },
+  { default: () => null }
+)
+
+// 🔥 FETCH SSR : Promotions
+const { data: promotionsData } = await useAsyncData(
+  `promotions-${salon.value?._id}`,
+  async () => {
+    if (!salon.value?._id || salon.value._id === 'default') return null
+
+    try {
+      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/promotions/firm/${salon.value._id}`)
+      console.log('✅ [SSR] Promotions chargées')
+      return response
+    } catch (error) {
+      console.warn('⚠️ [SSR] Pas de promotions')
+      return null
+    }
+  },
+  { default: () => null }
+)
+
+// Extraire les données des avis
+const noteEtablissement = computed(() => avisData.value?.moyennes?.noteEtablissement || null)
+const notePrestations = computed(() => avisData.value?.moyennes?.notePrestations || null)
+const noteEmploye = computed(() => avisData.value?.moyennes?.noteEmploye || null)
+const noteGenerale = computed(() => avisData.value?.moyennes?.noteGenerale || null)
+const avisList = computed(() => avisData.value?.avis || [])
+const nombreAvis = computed(() => avisList.value.length)
+
+// Extraire les promotions actives
+const promotions = computed(() => {
+  if (!promotionsData.value?.success || !promotionsData.value?.promotions) return []
+
+  return promotionsData.value.promotions.filter(promo =>
+    promo.actif &&
+    new Date(promo.dateDebut) <= new Date() &&
+    new Date(promo.dateFin) >= new Date()
+  )
+})
+
+// Computed pour vérifier si l'établissement fait partie du réseau BookMySalon
+const isRevendique = computed(() => {
+  return salon.value?.isActive === true
+})
+
+// 🔥 SEO : Métadonnées dynamiques pour Google
+useSeoMeta({
+  title: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
+  description: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
+  ogTitle: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
+  ogDescription: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
+  ogImage: () => salon.value?.logo || salon.value?.image || '',
+  ogUrl: () => `https://bookmysalon.fr/etablissement/${salonId.value}`,
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => `${salon.value?.nom_societe || 'Salon'} - BookMySalon`,
+  twitterDescription: () => salon.value?.description || 'Réservez votre rendez-vous en ligne',
+  twitterImage: () => salon.value?.logo || salon.value?.image || ''
+})
+
+// 🔥 Structured Data JSON-LD pour Google (LocalBusiness)
+useHead({
+  script: [
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        name: salon.value?.nom_societe || 'Salon',
+        description: salon.value?.description || '',
+        image: salon.value?.logo || salon.value?.image || '',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: salon.value?.adresse || '',
+          addressLocality: salon.value?.ville || '',
+          addressCountry: 'FR'
+        },
+        telephone: salon.value?.telephone || '',
+        url: `https://bookmysalon.fr/etablissement/${salonId.value}`,
+        priceRange: '€€',
+        aggregateRating: noteGenerale.value ? {
+          '@type': 'AggregateRating',
+          ratingValue: noteGenerale.value,
+          reviewCount: nombreAvis.value
+        } : undefined
+      })
+    }
+  ]
+})
+
+// 🔥 Comptabiliser la vue côté client uniquement (pas en SSR)
+if (import.meta.client && salon.value?._id && salon.value._id !== 'default') {
+  comptabiliserVue(salon.value._id).catch(err => console.error('Erreur tracking vue:', err))
+}
 function calculerPrixAvecPromo(service) {
   if (!promotions.value || promotions.value.length === 0) {
     return { prixFinal: service.prix, hasPromo: false }
@@ -660,16 +698,23 @@ function retourAuxResultats() { router.back() }
 async function comptabiliserVue() {
   const actualSalonId = salon.value._id || salonId.value;
   if (!actualSalonId || actualSalonId === 'default') return
-  await axios.post(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/view/${actualSalonId}`, {
-    type: salon.value.typeResultat || 'firm'
+  await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/view/${actualSalonId}`, {
+    method: 'POST',
+    body: {
+      type: salon.value.typeResultat || 'firm'
+    }
   })
 }
 
 async function comptabiliserConversion(action) {
   try {
     const actualSalonId = salon.value._id || salonId.value;
-    await axios.post(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/conversion/${actualSalonId}`, {
-      type: salon.value.typeResultat || 'firm', action
+    await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/conversion/${actualSalonId}`, {
+      method: 'POST',
+      body: {
+        type: salon.value.typeResultat || 'firm',
+        action
+      }
     })
   } catch (error) {
     console.error('Erreur conversion tracking:', error)
@@ -682,17 +727,21 @@ async function soumettreReclamation() {
   isSubmitting.value = true
   try {
     const actualSalonId = salon.value._id || salonId.value;
-    const response = await axios.post('https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/claim', {
-      prospectId: actualSalonId, ...claimForm.value
+    const response = await $fetch('https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/claim', {
+      method: 'POST',
+      body: {
+        prospectId: actualSalonId,
+        ...claimForm.value
+      }
     })
-    if (response.data.success) {
-      alert(response.data.message)
+    if (response.success) {
+      alert(response.message)
       await comptabiliserConversion('reclamation')
       showClaimModal.value = false
       claimForm.value = { prenom: '', nom: '', email: '', telephone: '', message: '' }
     }
   } catch (error) {
-    alert(error.response?.data?.message || 'Une erreur est survenue lors de la réclamation')
+    alert(error.data?.message || 'Une erreur est survenue lors de la réclamation')
   } finally {
     isSubmitting.value = false
   }
