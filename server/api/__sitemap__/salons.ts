@@ -1,6 +1,4 @@
-import { defineSitemapEventHandler } from '#imports'
-
-export default defineSitemapEventHandler(async () => {
+export default defineEventHandler(async () => {
   try {
     // Récupérer tous les salons depuis l'API backend
     const response = await $fetch('https://bookmysalon-967a856b16b6.herokuapp.com/api/search/all-salons')
@@ -13,7 +11,7 @@ export default defineSitemapEventHandler(async () => {
       return {
         loc: `/etablissement/${salon.slug || salon._id}`,
         lastmod: salon.updatedAt || salon.createdAt || new Date().toISOString(),
-        changefreq: 'weekly',
+        changefreq: 'weekly' as const,
         priority: 0.8
       }
     })

@@ -104,6 +104,10 @@ export default defineNuxtConfig({
       '/auth/**',
       '/confirmation',
       '/annulation'
+    ],
+    sources: [
+      '/api/__sitemap__/urls',
+      '/api/__sitemap__/salons'
     ]
   },
 
