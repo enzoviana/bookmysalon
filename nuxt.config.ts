@@ -94,6 +94,19 @@ export default defineNuxtConfig({
     defaultLocale: 'fr'
   },
 
+  // Sitemap configuration - hérite automatiquement de site.url
+  sitemap: {
+    exclude: [
+      '/userAccount',
+      '/mes-rendez-vous',
+      '/rendez-vous/**',
+      '/signup',
+      '/auth/**',
+      '/confirmation',
+      '/annulation'
+    ]
+  },
+
   ogImage: {
     enabled: false
   },
