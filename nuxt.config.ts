@@ -106,9 +106,10 @@ export default defineNuxtConfig({
       '/annulation'
     ],
     sources: [
-      '/__sitemap__/urls',
-      '/__sitemap__/salons'
-    ]
+      '/api/__sitemap__/urls',
+      '/api/__sitemap__/salons'
+    ],
+    strictNuxtContentPaths: true
   },
 
   ogImage: {
