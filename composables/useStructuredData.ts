@@ -35,8 +35,8 @@ export function generateSalonSchema(salon: Salon) {
     "@type": "LocalBusiness",
     "name": salon.nom_societe || salon.nom,
     "image": salon.logo || salon.image,
-    "url": `https://bookmysalon.com/etablissement/${salon.slug}`,
-    "@id": `https://bookmysalon.com/etablissement/${salon.slug}`,
+    "url": `https://bookmysalon.fr/etablissement/${salon.slug}`,
+    "@id": `https://bookmysalon.fr/etablissement/${salon.slug}`,
     "telephone": salon.telephone,
     "address": {
       "@type": "PostalAddress",
@@ -81,7 +81,7 @@ export function generateBreadcrumbSchema(breadcrumbs: Breadcrumb[]) {
       "@type": "ListItem",
       "position": index + 1,
       "name": crumb.name,
-      "item": `https://bookmysalon.com${crumb.path}`
+      "item": `https://bookmysalon.fr${crumb.path}`
     }))
   }
 }
@@ -101,7 +101,7 @@ export function generateSalonListSchema(salons: Salon[], name: string) {
     "itemListElement": salons.map((salon, index) => ({
       "@type": "ListItem",
       "position": index + 1,
-      "url": `https://bookmysalon.com/etablissement/${salon.slug}`
+      "url": `https://bookmysalon.fr/etablissement/${salon.slug}`
     }))
   }
 }
