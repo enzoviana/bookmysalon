@@ -106,8 +106,8 @@ export default defineNuxtConfig({
       '/annulation'
     ],
     sources: [
-      '/api/__sitemap__/urls',
-      '/api/__sitemap__/salons'
+      '/__sitemap__/urls',
+      '/__sitemap__/salons'
     ]
   },
 
