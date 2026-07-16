@@ -3,6 +3,22 @@
 
     <div class="flex flex-col justify-start sm:justify-center items-center w-full md:w-1/2 h-auto md:h-full p-6 sm:p-10 md:p-16 bg-white border-b md:border-b-0 md:border-r border-gray-100 dark:bg-zinc-950 dark:border-zinc-900">
 
+      <!-- Lien professionnel -->
+      <a
+        href="https://pro.bookmysalon.fr/login"
+        target="_blank"
+        class="w-full max-w-md mb-4 px-4 py-2.5 rounded-xl border border-amber-100 bg-amber-50/50 hover:bg-amber-50 text-center transition-all group dark:bg-amber-950/20 dark:border-amber-900/30 dark:hover:bg-amber-950/30"
+      >
+        <p class="text-xs font-medium text-amber-800 dark:text-amber-200">
+          <span class="mr-1.5">💼</span>
+          Êtes-vous professionnel ?
+          <span class="ml-2 text-amber-600 group-hover:text-amber-700 underline underline-offset-2 dark:text-amber-400 dark:group-hover:text-amber-300">
+            Accédez à l'espace pro
+            <i class="fas fa-arrow-right ml-1 text-[10px] group-hover:translate-x-0.5 transition-transform"></i>
+          </span>
+        </p>
+      </a>
+
       <div class="w-full max-w-md my-auto text-left">
 
         <!-- LOGIN FORM -->
