@@ -439,7 +439,7 @@
           </div>
 
           <div>
-            <label class="block text-[11px] font-medium uppercase tracking-wider mb-1.5 text-zinc-600 dark:text-zinc-400">Email professionnel *</label>
+            <label class="block text-[11px] font-medium uppercase tracking-wider mb-1.5 text-zinc-600 dark:text-zinc-400">Email *</label>
             <input v-model="claimForm.email" type="email" required class="w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition bg-gray-50 border-gray-200 text-zinc-900 focus:border-gray-400 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white dark:focus:border-zinc-700" />
           </div>
 
@@ -448,10 +448,7 @@
             <input v-model="claimForm.telephone" type="tel" required class="w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition bg-gray-50 border-gray-200 text-zinc-900 focus:border-gray-400 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white dark:focus:border-zinc-700" />
           </div>
 
-          <div>
-            <label class="block text-[11px] font-medium uppercase tracking-wider mb-1.5 text-zinc-600 dark:text-zinc-400">Message (optionnel)</label>
-            <textarea v-model="claimForm.message" rows="3" class="w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition resize-none bg-gray-50 border-gray-200 text-zinc-900 focus:border-gray-400 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white dark:focus:border-zinc-700"></textarea>
-          </div>
+
 
           <div class="flex gap-3 pt-2">
             <button type="button" @click="showClaimModal = false" class="flex-1 px-4 py-3 rounded-xl font-medium text-xs uppercase tracking-wider transition bg-gray-100 text-zinc-600 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-white">
@@ -485,6 +482,11 @@ const activeTab = ref('global')
 const showClaimModal = ref(false)
 const isSubmitting = ref(false)
 const claimForm = ref({ prenom: '', nom: '', email: '', telephone: '', message: '' })
+
+// 🔥 Préremplir le téléphone depuis l'URL (SMS démarchage)
+if (route.query.phone) {
+  claimForm.value.telephone = decodeURIComponent(route.query.phone)
+}
 
 // 🔥 FETCH SSR : Charger les données du salon côté serveur
 const { data: salon } = await useAsyncData(
