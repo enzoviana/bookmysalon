@@ -693,8 +693,12 @@ const googleReviewsCount = computed(() => {
 })
 
 const googleReviews = computed(() => {
+  console.log('📦 [Debug] googleReviewsData complet:', JSON.stringify(googleReviewsData.value, null, 2))
+
   const reviews = googleReviewsData.value?.reviews?.reviews || []
   console.log('🎯 [Computed] googleReviews:', reviews.length, 'avis')
+  console.log('📋 [Debug] Premier avis:', reviews[0])
+
   return reviews
 })
 
@@ -702,10 +706,12 @@ const hasGoogleReviews = computed(() => googleReviewsCount.value > 0)
 
 // Combiner les avis Google et les avis internes pour l'affichage
 const avisListeCombinee = computed(() => {
+  console.log('🔄 [avisListeCombinee] Recalcul...')
   const combined = []
 
   // Ajouter les avis internes (BookMySalon)
   if (avisList.value && avisList.value.length > 0) {
+    console.log('➕ Ajout de', avisList.value.length, 'avis BookMySalon')
     avisList.value.forEach(avis => {
       combined.push({
         id: avis._id,
@@ -720,8 +726,13 @@ const avisListeCombinee = computed(() => {
   }
 
   // Ajouter les avis Google
+  console.log('🔍 [avisListeCombinee] googleReviews.value:', googleReviews.value)
+  console.log('📊 [avisListeCombinee] Longueur:', googleReviews.value?.length)
+
   if (googleReviews.value && googleReviews.value.length > 0) {
+    console.log('➕ Ajout de', googleReviews.value.length, 'avis Google')
     googleReviews.value.forEach((review, idx) => {
+      console.log(`   Avis ${idx + 1}:`, review.authorName, '-', review.rating, '⭐')
       combined.push({
         id: `google-${idx}`,
         source: 'google',
@@ -732,6 +743,8 @@ const avisListeCombinee = computed(() => {
         photo: review.profilePhotoUrl
       })
     })
+  } else {
+    console.log('⚠️ [avisListeCombinee] Aucun avis Google à ajouter')
   }
 
   // Trier par note (décroissant) puis par date (plus récent d'abord)
