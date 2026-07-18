@@ -623,16 +623,33 @@ const { data: promotionsData } = await useAsyncData(
 
 // 🔥 FETCH SSR : Avis Google
 const { data: googleReviewsData } = await useAsyncData(
-  `google-reviews-${salon.value?._id}`,
+  `google-reviews-${salonId.value}`,
   async () => {
-    if (!salon.value?._id || salon.value._id === 'default') return null
+    if (!salon.value?._id || salon.value._id === 'default') {
+      console.log('⏭️ [SSR] Skip avis Google : salon par défaut ou pas d\'ID')
+      return null
+    }
 
     try {
-      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/firm/${salon.value._id}/reviews`)
-      console.log('✅ [SSR] Avis Google chargés:', response?.reviews?.count || 0, 'avis')
+      // Utiliser le slug ou l'ID du salon (priorité au slug pour cohérence URL)
+      const identifier = salon.value.slug || salon.value._id
+      console.log('🔍 [SSR] Fetch avis Google pour:', identifier)
+      console.log('   - Nom salon:', salon.value.nom_societe)
+      console.log('   - Type:', salon.value.typeResultat)
+
+      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/firm/${identifier}/reviews`)
+
+      console.log('✅ [SSR] Réponse avis Google reçue:')
+      console.log('   - Success:', response?.success)
+      console.log('   - Rating:', response?.reviews?.rating)
+      console.log('   - Count:', response?.reviews?.count)
+      console.log('   - Reviews:', response?.reviews?.reviews?.length, 'avis')
+
       return response
     } catch (error) {
-      console.warn('⚠️ [SSR] Pas d\'avis Google:', error.message)
+      console.error('❌ [SSR] Erreur avis Google:', error)
+      console.error('   - Message:', error.message)
+      console.error('   - Status:', error.statusCode)
       return null
     }
   },
@@ -663,9 +680,24 @@ const promotions = computed(() => {
 })
 
 // Extraire les avis Google
-const googleRating = computed(() => googleReviewsData.value?.reviews?.rating || 0)
-const googleReviewsCount = computed(() => googleReviewsData.value?.reviews?.count || 0)
-const googleReviews = computed(() => googleReviewsData.value?.reviews?.reviews || [])
+const googleRating = computed(() => {
+  const rating = googleReviewsData.value?.reviews?.rating || 0
+  console.log('🎯 [Computed] googleRating:', rating)
+  return rating
+})
+
+const googleReviewsCount = computed(() => {
+  const count = googleReviewsData.value?.reviews?.count || 0
+  console.log('🎯 [Computed] googleReviewsCount:', count)
+  return count
+})
+
+const googleReviews = computed(() => {
+  const reviews = googleReviewsData.value?.reviews?.reviews || []
+  console.log('🎯 [Computed] googleReviews:', reviews.length, 'avis')
+  return reviews
+})
+
 const hasGoogleReviews = computed(() => googleReviewsCount.value > 0)
 
 // Combiner les avis Google et les avis internes pour l'affichage
