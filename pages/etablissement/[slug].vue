@@ -185,71 +185,6 @@
             </div>
           </section>
 
-          <!-- AVIS GOOGLE -->
-          <section v-if="hasGoogleReviews" class="space-y-6 pt-4">
-            <div class="text-left border-b pb-4 border-gray-200 dark:border-zinc-900">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h2 class="text-xl font-normal tracking-tight text-zinc-900 dark:text-white">Avis Google</h2>
-                  <p class="text-xs font-light mt-1 text-gray-400 dark:text-zinc-500">Ce que disent nos clients sur Google</p>
-                </div>
-                <div class="flex items-center gap-2">
-                  <div class="flex items-center gap-1">
-                    <svg v-for="i in 5" :key="i" class="w-4 h-4" :class="i <= Math.round(googleRating) ? 'text-yellow-400' : 'text-gray-300 dark:text-zinc-700'" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </div>
-                  <span class="text-sm font-semibold text-zinc-900 dark:text-white">{{ googleRating.toFixed(1) }}</span>
-                  <span class="text-xs text-gray-400 dark:text-zinc-500">({{ googleReviewsCount }})</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="space-y-4">
-              <div
-                v-for="(review, idx) in googleReviews.slice(0, 3)"
-                :key="idx"
-                class="border rounded-2xl p-5 space-y-3 bg-white border-gray-100 shadow-sm dark:bg-zinc-900/20 dark:border-zinc-900"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-center gap-3">
-                    <img
-                      v-if="review.profilePhotoUrl"
-                      :src="review.profilePhotoUrl"
-                      :alt="review.authorName"
-                      class="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-zinc-800"
-                    />
-                    <div v-else class="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center border-2 border-gray-300 dark:border-zinc-700">
-                      <span class="text-xs font-medium text-zinc-600 dark:text-zinc-400">{{ review.authorName?.charAt(0) || '?' }}</span>
-                    </div>
-                    <div>
-                      <p class="text-sm font-medium text-zinc-900 dark:text-white">{{ review.authorName }}</p>
-                      <p class="text-xs text-gray-400 dark:text-zinc-500">{{ review.relativeTimeDescription }}</p>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <svg v-for="i in review.rating" :key="i" class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </div>
-                </div>
-                <p v-if="review.text" class="text-xs font-light leading-relaxed text-zinc-600 dark:text-zinc-400">{{ review.text }}</p>
-              </div>
-
-              <a
-                v-if="googleReviewsCount > 3"
-                :href="salon.siteWeb || `https://www.google.com/search?q=${encodeURIComponent(salon.nom_societe + ' ' + salon.adresse)}`"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="block text-center py-3 px-4 rounded-xl border text-xs font-medium uppercase tracking-wider transition-all
-                       bg-gray-50 border-gray-200 text-zinc-700 hover:bg-gray-100
-                       dark:bg-zinc-900/40 dark:border-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900"
-              >
-                Voir tous les {{ googleReviewsCount }} avis Google
-              </a>
-            </div>
-          </section>
-
           <!-- COLLABORATEURS -->
           <section v-if="salon.administrateurs && salon.administrateurs.length" class="space-y-6 pt-4">
             <div class="text-left border-b pb-4 border-gray-200 dark:border-zinc-900">
@@ -424,7 +359,7 @@
                     <p class="flex justify-between">Établissement <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEtablissement !== null ? noteEtablissement.toFixed(1) : '–' }} / 5</span></p>
                     <p class="flex justify-between">Prestations <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ notePrestations !== null ? notePrestations.toFixed(1) : '–' }} / 5</span></p>
                     <p class="flex justify-between">Staff de soin <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEmploye !== null ? noteEmploye.toFixed(1) : '–' }} / 5</span></p>
-                    <p class="pt-2 font-normal border-t mt-2 text-center text-[10px] border-gray-200 text-zinc-400 dark:border-zinc-900 dark:text-zinc-400">Basé sur {{ nombreAvis }} retours certifiés</p>
+                    <p class="pt-2 font-normal border-t mt-2 text-center text-[10px] border-gray-200 text-zinc-400 dark:border-zinc-900 dark:text-zinc-400">Basé sur {{ nombreAvis }} avis client{{ nombreAvis > 1 ? 's' : '' }}</p>
                   </div>
                 </div>
               </template>
@@ -433,17 +368,52 @@
               <template v-else>
                 <div class="max-h-[280px] overflow-y-auto space-y-3 pr-1 no-scrollbar">
                   <div
-                    v-for="avis in avisList"
-                    :key="avis._id"
-                    class="p-4 border rounded-xl space-y-2 border-gray-100 bg-gray-50/50 dark:border-zinc-900 dark:bg-zinc-950/20"
+                    v-for="avis in avisListeCombinee"
+                    :key="avis.id"
+                    class="p-4 border rounded-xl space-y-3 border-gray-100 bg-gray-50/50 dark:border-zinc-900 dark:bg-zinc-950/20"
                   >
-                    <p class="italic text-xs font-light leading-relaxed text-zinc-600 dark:text-zinc-400">" {{ avis.avis }} "</p>
-                    <div class="pt-2 border-t flex items-center justify-between text-[10px] uppercase tracking-wider font-light border-gray-100 text-gray-400 dark:border-zinc-900/60 dark:text-zinc-500">
-                      <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ avis.clientId.prenom }} {{ avis.clientId.nom[0] }}.</span>
-                      <span class="font-mono">{{ new Date(avis.dateAvis).toLocaleDateString() }}</span>
+                    <!-- En-tête avec photo, nom et badge source -->
+                    <div class="flex items-center gap-3">
+                      <img
+                        v-if="avis.photo"
+                        :src="avis.photo"
+                        :alt="avis.auteur"
+                        class="w-8 h-8 rounded-full border-2 border-gray-200 dark:border-zinc-800"
+                      />
+                      <div v-else class="w-8 h-8 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center border-2 border-gray-300 dark:border-zinc-700">
+                        <span class="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">{{ avis.auteur?.charAt(0) || '?' }}</span>
+                      </div>
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium text-xs text-zinc-700 dark:text-zinc-300">{{ avis.auteur }}</span>
+                          <span
+                            v-if="avis.source === 'google'"
+                            class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/40"
+                          >
+                            Google
+                          </span>
+                          <span
+                            v-else
+                            class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/40"
+                          >
+                            Vérifié
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                          <div class="flex items-center gap-0.5">
+                            <svg v-for="i in avis.note" :key="i" class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          </div>
+                          <span class="text-[10px] font-mono text-gray-400 dark:text-zinc-500">{{ avis.date.toLocaleDateString() }}</span>
+                        </div>
+                      </div>
                     </div>
+
+                    <!-- Texte de l'avis -->
+                    <p class="italic text-xs font-light leading-relaxed text-zinc-600 dark:text-zinc-400">"{{ avis.texte }}"</p>
                   </div>
-                  <p v-if="avisList.length === 0" class="text-center text-xs py-4 italic text-gray-400 dark:text-zinc-600">Zéro commentaire référencé.</p>
+                  <p v-if="avisListeCombinee.length === 0" class="text-center text-xs py-4 italic text-gray-400 dark:text-zinc-600">Aucun avis disponible pour le moment.</p>
                 </div>
               </template>
             </div>
@@ -675,7 +645,11 @@ const notePrestations = computed(() => avisData.value?.moyennes?.notePrestations
 const noteEmploye = computed(() => avisData.value?.moyennes?.noteEmploye || null)
 const noteGenerale = computed(() => avisData.value?.moyennes?.noteGenerale || null)
 const avisList = computed(() => avisData.value?.avis || [])
-const nombreAvis = computed(() => avisList.value.length)
+const nombreAvis = computed(() => {
+  const avisInternes = avisList.value.length
+  const avisGoogle = googleReviewsCount.value
+  return avisInternes + avisGoogle
+})
 
 // Extraire les promotions actives
 const promotions = computed(() => {
@@ -693,6 +667,49 @@ const googleRating = computed(() => googleReviewsData.value?.reviews?.rating || 
 const googleReviewsCount = computed(() => googleReviewsData.value?.reviews?.count || 0)
 const googleReviews = computed(() => googleReviewsData.value?.reviews?.reviews || [])
 const hasGoogleReviews = computed(() => googleReviewsCount.value > 0)
+
+// Combiner les avis Google et les avis internes pour l'affichage
+const avisListeCombinee = computed(() => {
+  const combined = []
+
+  // Ajouter les avis internes (BookMySalon)
+  if (avisList.value && avisList.value.length > 0) {
+    avisList.value.forEach(avis => {
+      combined.push({
+        id: avis._id,
+        source: 'bookmysalon',
+        texte: avis.avis,
+        auteur: `${avis.clientId?.prenom || ''} ${avis.clientId?.nom?.[0] || ''}.`,
+        date: new Date(avis.dateAvis),
+        note: avis.noteGenerale || 5,
+        photo: null
+      })
+    })
+  }
+
+  // Ajouter les avis Google
+  if (googleReviews.value && googleReviews.value.length > 0) {
+    googleReviews.value.forEach((review, idx) => {
+      combined.push({
+        id: `google-${idx}`,
+        source: 'google',
+        texte: review.text || 'Avis sans commentaire',
+        auteur: review.authorName,
+        date: new Date(review.time * 1000), // Convertir timestamp Unix en Date
+        note: review.rating,
+        photo: review.profilePhotoUrl
+      })
+    })
+  }
+
+  // Trier par note (décroissant) puis par date (plus récent d'abord)
+  return combined
+    .sort((a, b) => {
+      if (b.note !== a.note) return b.note - a.note
+      return b.date - a.date
+    })
+    .slice(0, 5) // Limiter à 5 avis
+})
 
 // Computed pour vérifier si l'établissement fait partie du réseau BookMySalon
 const isRevendique = computed(() => {
