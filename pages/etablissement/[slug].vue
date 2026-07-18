@@ -185,6 +185,71 @@
             </div>
           </section>
 
+          <!-- AVIS GOOGLE -->
+          <section v-if="hasGoogleReviews" class="space-y-6 pt-4">
+            <div class="text-left border-b pb-4 border-gray-200 dark:border-zinc-900">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-xl font-normal tracking-tight text-zinc-900 dark:text-white">Avis Google</h2>
+                  <p class="text-xs font-light mt-1 text-gray-400 dark:text-zinc-500">Ce que disent nos clients sur Google</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1">
+                    <svg v-for="i in 5" :key="i" class="w-4 h-4" :class="i <= Math.round(googleRating) ? 'text-yellow-400' : 'text-gray-300 dark:text-zinc-700'" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
+                  <span class="text-sm font-semibold text-zinc-900 dark:text-white">{{ googleRating.toFixed(1) }}</span>
+                  <span class="text-xs text-gray-400 dark:text-zinc-500">({{ googleReviewsCount }})</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-4">
+              <div
+                v-for="(review, idx) in googleReviews.slice(0, 3)"
+                :key="idx"
+                class="border rounded-2xl p-5 space-y-3 bg-white border-gray-100 shadow-sm dark:bg-zinc-900/20 dark:border-zinc-900"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <img
+                      v-if="review.profilePhotoUrl"
+                      :src="review.profilePhotoUrl"
+                      :alt="review.authorName"
+                      class="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-zinc-800"
+                    />
+                    <div v-else class="w-10 h-10 rounded-full bg-gray-200 dark:bg-zinc-800 flex items-center justify-center border-2 border-gray-300 dark:border-zinc-700">
+                      <span class="text-xs font-medium text-zinc-600 dark:text-zinc-400">{{ review.authorName?.charAt(0) || '?' }}</span>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-zinc-900 dark:text-white">{{ review.authorName }}</p>
+                      <p class="text-xs text-gray-400 dark:text-zinc-500">{{ review.relativeTimeDescription }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <svg v-for="i in review.rating" :key="i" class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  </div>
+                </div>
+                <p v-if="review.text" class="text-xs font-light leading-relaxed text-zinc-600 dark:text-zinc-400">{{ review.text }}</p>
+              </div>
+
+              <a
+                v-if="googleReviewsCount > 3"
+                :href="salon.siteWeb || `https://www.google.com/search?q=${encodeURIComponent(salon.nom_societe + ' ' + salon.adresse)}`"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="block text-center py-3 px-4 rounded-xl border text-xs font-medium uppercase tracking-wider transition-all
+                       bg-gray-50 border-gray-200 text-zinc-700 hover:bg-gray-100
+                       dark:bg-zinc-900/40 dark:border-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              >
+                Voir tous les {{ googleReviewsCount }} avis Google
+              </a>
+            </div>
+          </section>
+
           <!-- COLLABORATEURS -->
           <section v-if="salon.administrateurs && salon.administrateurs.length" class="space-y-6 pt-4">
             <div class="text-left border-b pb-4 border-gray-200 dark:border-zinc-900">
@@ -586,6 +651,24 @@ const { data: promotionsData } = await useAsyncData(
   { default: () => null }
 )
 
+// 🔥 FETCH SSR : Avis Google
+const { data: googleReviewsData } = await useAsyncData(
+  `google-reviews-${salon.value?._id}`,
+  async () => {
+    if (!salon.value?._id || salon.value._id === 'default') return null
+
+    try {
+      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/firm/${salon.value._id}/reviews`)
+      console.log('✅ [SSR] Avis Google chargés:', response?.reviews?.count || 0, 'avis')
+      return response
+    } catch (error) {
+      console.warn('⚠️ [SSR] Pas d\'avis Google:', error.message)
+      return null
+    }
+  },
+  { default: () => null }
+)
+
 // Extraire les données des avis
 const noteEtablissement = computed(() => avisData.value?.moyennes?.noteEtablissement || null)
 const notePrestations = computed(() => avisData.value?.moyennes?.notePrestations || null)
@@ -604,6 +687,12 @@ const promotions = computed(() => {
     new Date(promo.dateFin) >= new Date()
   )
 })
+
+// Extraire les avis Google
+const googleRating = computed(() => googleReviewsData.value?.reviews?.rating || 0)
+const googleReviewsCount = computed(() => googleReviewsData.value?.reviews?.count || 0)
+const googleReviews = computed(() => googleReviewsData.value?.reviews?.reviews || [])
+const hasGoogleReviews = computed(() => googleReviewsCount.value > 0)
 
 // Computed pour vérifier si l'établissement fait partie du réseau BookMySalon
 const isRevendique = computed(() => {
