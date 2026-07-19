@@ -359,7 +359,28 @@
                     <p class="flex justify-between">Établissement <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEtablissement !== null ? noteEtablissement.toFixed(1) : '–' }} / 5</span></p>
                     <p class="flex justify-between">Prestations <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ notePrestations !== null ? notePrestations.toFixed(1) : '–' }} / 5</span></p>
                     <p class="flex justify-between">Staff de soin <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEmploye !== null ? noteEmploye.toFixed(1) : '–' }} / 5</span></p>
-                    <p class="pt-2 font-normal border-t mt-2 text-center text-[10px] border-gray-200 text-zinc-400 dark:border-zinc-900 dark:text-zinc-400">Basé sur {{ nombreAvis }} avis client{{ nombreAvis > 1 ? 's' : '' }}</p>
+
+                    <div class="pt-2 border-t mt-2 border-gray-200 dark:border-zinc-900">
+                      <p class="text-center text-[10px] font-normal text-zinc-400 dark:text-zinc-400">
+                        Basé sur {{ nombreAvis }} avis client{{ nombreAvis > 1 ? 's' : '' }}
+                      </p>
+
+                      <!-- Détail des sources si avis multiples -->
+                      <div v-if="avisList.length > 0 || googleReviewsCount > 0" class="flex items-center justify-center gap-3 mt-2 text-[9px]">
+                        <div v-if="avisList.length > 0" class="flex items-center gap-1">
+                          <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/40">
+                            {{ avisList.length }}
+                          </span>
+                          <span class="text-zinc-400 dark:text-zinc-500">BookMySalon</span>
+                        </div>
+                        <div v-if="googleReviewsCount > 0" class="flex items-center gap-1">
+                          <span class="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-200 font-bold dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/40">
+                            {{ googleReviewsCount }}
+                          </span>
+                          <span class="text-zinc-400 dark:text-zinc-500">Google</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </template>
@@ -660,7 +681,28 @@ const { data: googleReviewsData } = await useAsyncData(
 const noteEtablissement = computed(() => avisData.value?.moyennes?.noteEtablissement || null)
 const notePrestations = computed(() => avisData.value?.moyennes?.notePrestations || null)
 const noteEmploye = computed(() => avisData.value?.moyennes?.noteEmploye || null)
-const noteGenerale = computed(() => avisData.value?.moyennes?.noteGenerale || null)
+const noteGenerale = computed(() => {
+  // Note générale = moyenne entre note interne et note Google
+  let totalRating = 0
+  let count = 0
+
+  // Note interne BookMySalon
+  const noteInterne = avisData.value?.moyennes?.noteGenerale
+  if (noteInterne && noteInterne > 0) {
+    totalRating += noteInterne
+    count++
+  }
+
+  // Note Google
+  if (googleRating.value && googleRating.value > 0) {
+    totalRating += googleRating.value
+    count++
+  }
+
+  // Retourner la moyenne, ou null si aucune note
+  return count > 0 ? Math.round((totalRating / count) * 10) / 10 : null
+})
+
 const avisList = computed(() => avisData.value?.avis || [])
 const nombreAvis = computed(() => {
   const avisInternes = avisList.value.length
