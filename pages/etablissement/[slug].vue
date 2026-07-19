@@ -562,7 +562,7 @@ if (route.query.phone) {
   claimForm.value.telephone = decodeURIComponent(route.query.phone)
 }
 
-// 🔥 FETCH SSR : Charger les données du salon côté serveur
+// 🔥 FETCH SSR ÉTAPE 1 : Charger les données principales indispensables du salon
 const { data: salon } = await useAsyncData(
   `salon-${salonId.value}`,
   async () => {
@@ -571,13 +571,9 @@ const { data: salon } = await useAsyncData(
       : `https://bookmysalon-967a856b16b6.herokuapp.com/api/search/${salonId.value}`
 
     const response = await $fetch(endpoint)
-    const salonData = response?.data || response
-
-    console.log('✅ [SSR] Données salon chargées:', salonData?.nom_societe)
-    return salonData
+    return response?.data || response
   },
   {
-    // Salon par défaut si l'API échoue
     default: () => ({
       _id: 'default',
       telephone: '+33 1 23 45 67 89',
@@ -624,108 +620,64 @@ const { data: salon } = await useAsyncData(
   }
 )
 
-// 🔥 FETCH SSR : Avis
-const { data: avisData } = await useAsyncData(
-  `avis-${salon.value?._id}`,
-  async () => {
-    if (!salon.value?._id || salon.value._id === 'default') return null
-
-    try {
-      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/avis/${salon.value._id}`)
-      console.log('✅ [SSR] Avis chargés')
-      return response
-    } catch (error) {
-      console.warn('⚠️ [SSR] Erreur avis:', error.message)
-      return null
-    }
-  },
-  { default: () => null }
-)
-
-// 🔥 FETCH SSR : Promotions
-const { data: promotionsData } = await useAsyncData(
-  `promotions-${salon.value?._id}`,
-  async () => {
-    if (!salon.value?._id || salon.value._id === 'default') return null
-
-    try {
-      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/promotions/firm/${salon.value._id}`)
-      console.log('✅ [SSR] Promotions chargées')
-      return response
-    } catch (error) {
-      console.warn('⚠️ [SSR] Pas de promotions')
-      return null
-    }
-  },
-  { default: () => null }
-)
-
-// 🔥 FETCH SSR : Avis Google
-const { data: googleReviewsData } = await useAsyncData(
-  `google-reviews-${salonId.value}`,
+// 🔥 FETCH SSR ÉTAPE 2 : Lancer TOUTES les autres requêtes en parallèle (Vitesse de chargement x3)
+const { data: requetesComplementaires } = await useAsyncData(
+  `complements-${salon.value?._id}`,
   async () => {
     if (!salon.value?._id || salon.value._id === 'default') {
-      console.log('⏭️ [SSR] Skip avis Google : salon par défaut ou pas d\'ID')
-      return null
+      return { avis: null, promos: null, google: null }
     }
 
-    try {
-      // Utiliser le slug ou l'ID du salon (priorité au slug pour cohérence URL)
-      const identifier = salon.value.slug || salon.value._id
-      console.log('🔍 [SSR] Fetch avis Google pour:', identifier)
-      console.log('   - Nom salon:', salon.value.nom_societe)
-      console.log('   - Type:', salon.value.typeResultat)
+    const identifier = salon.value.slug || salon.value._id
 
-      const response = await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/firm/${identifier}/reviews`)
+    const [avisRes, promosRes, googleRes] = await Promise.allSettled([
+      $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/avis/${salon.value._id}`),
+      $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/promotions/firm/${salon.value._id}`),
+      $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/firm/${identifier}/reviews`)
+    ])
 
-      console.log('✅ [SSR] Réponse avis Google reçue:')
-      console.log('   - Success:', response?.success)
-      console.log('   - Rating:', response?.reviews?.rating)
-      console.log('   - Count:', response?.reviews?.count)
-      console.log('   - Reviews:', response?.reviews?.reviews?.length, 'avis')
-
-      return response
-    } catch (error) {
-      console.error('❌ [SSR] Erreur avis Google:', error)
-      console.error('   - Message:', error.message)
-      console.error('   - Status:', error.statusCode)
-      return null
+    return {
+      avis: avisRes.status === 'fulfilled' ? avisRes.value : null,
+      promos: promosRes.status === 'fulfilled' ? promosRes.value : null,
+      google: googleRes.status === 'fulfilled' ? googleRes.value : null
     }
   },
-  { default: () => null }
+  {
+    default: () => ({ avis: null, promos: null, google: null })
+  }
 )
+
+// Mapping des données asynchrones parallélisées
+const avisData = computed(() => requetesComplementaires.value?.avis)
+const promotionsData = computed(() => requetesComplementaires.value?.promos)
+const googleReviewsData = computed(() => requetesComplementaires.value?.google)
 
 // Extraire les données des avis
 const noteEtablissement = computed(() => avisData.value?.moyennes?.noteEtablissement || null)
 const notePrestations = computed(() => avisData.value?.moyennes?.notePrestations || null)
 const noteEmploye = computed(() => avisData.value?.moyennes?.noteEmploye || null)
+
 const noteGenerale = computed(() => {
-  // Note générale = moyenne entre note interne et note Google
   let totalRating = 0
   let count = 0
 
-  // Note interne BookMySalon
   const noteInterne = avisData.value?.moyennes?.noteGenerale
   if (noteInterne && noteInterne > 0) {
     totalRating += noteInterne
     count++
   }
 
-  // Note Google
   if (googleRating.value && googleRating.value > 0) {
     totalRating += googleRating.value
     count++
   }
 
-  // Retourner la moyenne, ou null si aucune note
   return count > 0 ? Math.round((totalRating / count) * 10) / 10 : null
 })
 
 const avisList = computed(() => avisData.value?.avis || [])
 const nombreAvis = computed(() => {
-  const avisInternes = avisList.value.length
-  const avisGoogle = googleReviewsCount.value
-  return avisInternes + avisGoogle
+  return avisList.value.length + googleReviewsCount.value
 })
 
 // Extraire les promotions actives
@@ -740,38 +692,16 @@ const promotions = computed(() => {
 })
 
 // Extraire les avis Google
-const googleRating = computed(() => {
-  const rating = googleReviewsData.value?.reviews?.rating || 0
-  console.log('🎯 [Computed] googleRating:', rating)
-  return rating
-})
-
-const googleReviewsCount = computed(() => {
-  const count = googleReviewsData.value?.reviews?.count || 0
-  console.log('🎯 [Computed] googleReviewsCount:', count)
-  return count
-})
-
-const googleReviews = computed(() => {
-  console.log('📦 [Debug] googleReviewsData complet:', JSON.stringify(googleReviewsData.value, null, 2))
-
-  const reviews = googleReviewsData.value?.reviews?.reviews || []
-  console.log('🎯 [Computed] googleReviews:', reviews.length, 'avis')
-  console.log('📋 [Debug] Premier avis:', reviews[0])
-
-  return reviews
-})
-
+const googleRating = computed(() => googleReviewsData.value?.reviews?.rating || 0)
+const googleReviewsCount = computed(() => googleReviewsData.value?.reviews?.count || 0)
+const googleReviews = computed(() => googleReviewsData.value?.reviews?.reviews || [])
 const hasGoogleReviews = computed(() => googleReviewsCount.value > 0)
 
 // Combiner les avis Google et les avis internes pour l'affichage
 const avisListeCombinee = computed(() => {
-  console.log('🔄 [avisListeCombinee] Recalcul...')
   const combined = []
 
-  // Ajouter les avis internes (BookMySalon)
   if (avisList.value && avisList.value.length > 0) {
-    console.log('➕ Ajout de', avisList.value.length, 'avis BookMySalon')
     avisList.value.forEach(avis => {
       combined.push({
         id: avis._id,
@@ -785,134 +715,86 @@ const avisListeCombinee = computed(() => {
     })
   }
 
-  // Ajouter les avis Google
-  console.log('🔍 [avisListeCombinee] googleReviews.value:', googleReviews.value)
-  console.log('📊 [avisListeCombinee] Longueur:', googleReviews.value?.length)
-
   if (googleReviews.value && googleReviews.value.length > 0) {
-    console.log('➕ Ajout de', googleReviews.value.length, 'avis Google')
     googleReviews.value.forEach((review, idx) => {
-      console.log(`   Avis ${idx + 1}:`, review.authorName, '-', review.rating, '⭐')
       combined.push({
         id: `google-${idx}`,
         source: 'google',
         texte: review.text || 'Avis sans commentaire',
         auteur: review.authorName,
-        date: new Date(review.time * 1000), // Convertir timestamp Unix en Date
+        date: new Date(review.time * 1000),
         note: review.rating,
         photo: review.profilePhotoUrl
       })
     })
-  } else {
-    console.log('⚠️ [avisListeCombinee] Aucun avis Google à ajouter')
   }
 
-  // Trier par note (décroissant) puis par date (plus récent d'abord)
   return combined
     .sort((a, b) => {
       if (b.note !== a.note) return b.note - a.note
       return b.date - a.date
     })
-    .slice(0, 5) // Limiter à 5 avis
+    .slice(0, 5)
 })
 
-// Computed pour vérifier si l'établissement fait partie du réseau BookMySalon
-const isRevendique = computed(() => {
-  return salon.value?.isActive === true
-})
+const isRevendique = computed(() => salon.value?.isActive === true)
 
-// 🔥 Fonction pour extraire la ville depuis l'adresse
+// 🔥 Extraction intelligente de la ville pour le ciblage local SEO
 const extraireVille = () => {
   if (!salon.value?.adresse && !salon.value?.ville) return ''
-
-  // Si le champ ville existe directement
   if (salon.value.ville) return salon.value.ville
 
-  // Sinon, extraire de l'adresse (format: "10 rue X, 95120 Ermont" ou "10 rue X, Ermont")
   const adresse = salon.value.adresse || ''
   const parts = adresse.split(',')
   if (parts.length >= 2) {
-    // Prendre la dernière partie et enlever le code postal si présent
     const dernierePart = parts[parts.length - 1].trim()
-    return dernierePart.replace(/^\d{5}\s*/, '') // Enlever code postal type "95120 "
+    return dernierePart.replace(/^\d{5}\s*/, '')
   }
 
-  // Fallback: chercher un mot après une virgule
   const match = adresse.match(/,\s*([A-Za-zÀ-ÿ\s-]+)$/i)
   return match ? match[1].trim() : ''
 }
 
-// 🔥 Fonction pour obtenir la prestation principale (première catégorie)
 const getPrestationPrincipale = () => {
   if (!salon.value?.categories || salon.value.categories.length === 0) return 'Beauté & Bien-être'
-
-  const premiereCategorie = salon.value.categories[0]
-  return premiereCategorie.nom || 'Beauté & Bien-être'
+  return salon.value.categories[0].nom || 'Beauté & Bien-être'
 }
 
-// 🔥 Construire le titre SEO optimisé (max 60 caractères)
+// 🔥 Titre SEO ultra-percutant pour Google Search
 const titreSEO = computed(() => {
   const nom = salon.value?.nom_societe || 'Salon'
   const prestation = getPrestationPrincipale()
   const ville = extraireVille()
 
-  let titre = ''
-  if (ville) {
-    titre = `${nom} - ${prestation} à ${ville} | BookMySalon`
-  } else {
-    titre = `${nom} - ${prestation} | BookMySalon`
-  }
+  let titre = ville ? `${nom} - ${prestation} à ${ville} | BookMySalon` : `${nom} - ${prestation} | BookMySalon`
 
-  // Limiter à 60 caractères pour Google
   if (titre.length > 60) {
-    // Tronquer le nom du salon si nécessaire
     const nomCourt = nom.substring(0, 30)
-    titre = `${nomCourt} - ${prestation} à ${ville} | BookMySalon`
-
-    // Si encore trop long, enlever "à [ville]"
-    if (titre.length > 60) {
-      titre = `${nomCourt} - ${prestation} | BookMySalon`
-    }
+    titre = ville ? `${nomCourt} - ${prestation} à ${ville}` : `${nomCourt} - ${prestation}`
   }
-
   return titre
 })
 
-// 🔥 Construire la description SEO optimisée (max 155 caractères)
+// 🔥 Meta description unique anti-duplicate content (Injection dynamique de services)
 const descriptionSEO = computed(() => {
   const nom = salon.value?.nom_societe || 'notre salon'
   const ville = extraireVille()
-  const prestation = getPrestationPrincipale()
+  
+  const listeServices = salon.value?.categories
+    ? salon.value.categories.map(c => c.nom).slice(0, 3).join(', ')
+    : 'Beauté et Bien-être'
 
-  // Extraire une spécificité depuis la description ou utiliser la prestation
-  let specificite = prestation
-  if (salon.value?.description && salon.value.description.length > 20) {
-    // Calculer l'espace disponible pour la spécificité
-    const baseLength = `Prenez rendez-vous en ligne chez ${nom} à ${ville}. . Consultez les avis, les horaires et réservez en 1 clic !`.length
-    const maxSpecificite = 155 - baseLength
+  let description = ville 
+    ? `Réservez un rendez-vous chez ${nom} à ${ville}. Prestations : ${listeServices}. Retrouvez les tarifs, avis clients et horaires.`
+    : `Réservez un rendez-vous chez ${nom}. Prestations : ${listeServices}. Retrouvez les tarifs, avis clients et horaires.`
 
-    specificite = salon.value.description.substring(0, Math.max(20, maxSpecificite)).trim()
-    if (salon.value.description.length > maxSpecificite) {
-      specificite = specificite.replace(/\s+\S*$/, '...') // Couper au dernier mot
-    }
-  }
-
-  let description = ''
-  if (ville) {
-    description = `Prenez rendez-vous en ligne chez ${nom} à ${ville}. ${specificite}. Consultez les avis, les horaires et réservez en 1 clic !`
-  } else {
-    description = `Prenez rendez-vous en ligne chez ${nom}. ${specificite}. Consultez les avis, les horaires et réservez en 1 clic !`
-  }
-
-  // Limite de sécurité à 155 caractères
   if (description.length > 155) {
     description = description.substring(0, 152) + '...'
   }
-
   return description
 })
 
-// 🔥 SEO : Métadonnées dynamiques pour Google
+// 🔥 Injection des Meta-données OpenGraph et Twitter
 useSeoMeta({
   title: titreSEO,
   description: descriptionSEO,
@@ -926,14 +808,14 @@ useSeoMeta({
   twitterImage: () => salon.value?.logo || salon.value?.image || ''
 })
 
-// 🔥 Structured Data JSON-LD pour Google (LocalBusiness)
+// 🔥 Schema.org JSON-LD configuré au millimètre pour obtenir les étoiles jaunes Google Search
 const structuredData = computed(() => {
   const ville = extraireVille()
-  const prestation = getPrestationPrincipale()
 
   const data = {
     '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
+    '@type': 'BeautySalon',
+    '@id': `https://bookmysalon.fr/etablissement/${salonId.value}#salon`,
     name: salon.value?.nom_societe || 'Salon',
     description: descriptionSEO.value,
     image: salon.value?.logo || salon.value?.image || '',
@@ -945,28 +827,22 @@ const structuredData = computed(() => {
     },
     telephone: salon.value?.telephone || '',
     url: `https://bookmysalon.fr/etablissement/${salonId.value}`,
-    priceRange: '€€',
-    ...(noteGenerale.value && {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: noteGenerale.value,
-        reviewCount: nombreAvis.value
-      }
-    })
+    priceRange: '€€'
   }
 
-  // Ajouter les horaires d'ouverture si disponibles
+  if (noteGenerale.value && nombreAvis.value > 0) {
+    data.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: noteGenerale.value.toString(),
+      reviewCount: nombreAvis.value.toString(),
+      bestRating: '5',
+      worstRating: '1'
+    }
+  }
+
   if (salon.value?.horaires) {
     const openingHours = []
-    const jours = {
-      lundi: 'Monday',
-      mardi: 'Tuesday',
-      mercredi: 'Wednesday',
-      jeudi: 'Thursday',
-      vendredi: 'Friday',
-      samedi: 'Saturday',
-      dimanche: 'Sunday'
-    }
+    const jours = { lundi: 'Monday', mardi: 'Tuesday', mercredi: 'Wednesday', jeudi: 'Thursday', vendredi: 'Friday', samedi: 'Saturday', dimanche: 'Sunday' }
 
     for (const [jourFr, jourEn] of Object.entries(jours)) {
       const horaire = salon.value.horaires[jourFr]
@@ -974,16 +850,25 @@ const structuredData = computed(() => {
         openingHours.push(`${jourEn} ${horaire[0].debut}-${horaire[0].fin}`)
       }
     }
-
-    if (openingHours.length > 0) {
-      data.openingHours = openingHours
-    }
+    if (openingHours.length > 0) data.openingHours = openingHours
   }
 
   return data
 })
 
+// 🔥 useHead incluant le fix absolu pour le Favicon
 useHead({
+  htmlAttrs: {
+    lang: 'fr'
+  },
+  link: [
+    {
+      rel: 'icon',
+      type: 'image/x-icon',
+      href: '/favicon.ico',
+      sizes: '48x48'
+    }
+  ],
   script: [
     {
       type: 'application/ld+json',
@@ -992,30 +877,16 @@ useHead({
   ]
 })
 
-// 🔥 Comptabiliser la vue côté client uniquement (pas en SSR)
 if (import.meta.client && salon.value?._id && salon.value._id !== 'default') {
   comptabiliserVue(salon.value._id).catch(err => console.error('Erreur tracking vue:', err))
 }
 
-// 🔍 Debug SEO en mode développement
-if (import.meta.dev && import.meta.client) {
-  watch([titreSEO, descriptionSEO], () => {
-    console.group('🔍 SEO Debug')
-    console.log('📌 Titre:', titreSEO.value, `(${titreSEO.value.length} caractères)`)
-    console.log('📝 Description:', descriptionSEO.value, `(${descriptionSEO.value.length} caractères)`)
-    console.log('📍 Ville extraite:', extraireVille())
-    console.log('🎯 Prestation principale:', getPrestationPrincipale())
-    console.log('📊 Structured Data:', structuredData.value)
-    console.groupEnd()
-  }, { immediate: true })
-}
 function calculerPrixAvecPromo(service) {
   if (!promotions.value || promotions.value.length === 0) {
     return { prixFinal: service.prix, hasPromo: false }
   }
   const promo = promotions.value.find(p =>
-    (!p.servicesSpecifiques || p.servicesSpecifiques.length === 0 ||
-     p.servicesSpecifiques.includes(service._id))
+    (!p.servicesSpecifiques || p.servicesSpecifiques.length === 0 || p.servicesSpecifiques.includes(service._id))
   )
   if (!promo) return { prixFinal: service.prix, hasPromo: false }
 
@@ -1039,7 +910,6 @@ async function redirigerVersRdv() { await comptabiliserConversion('reserver'); r
 async function prendreRdv(service) { await comptabiliserConversion('reserver'); router.push({ path: `/rendez-vous/${salon.value._id}`, query: { service: service._id } }) }
 function ouvrirPhoto(photoUrl) { window.open(photoUrl, '_blank') }
 
-// 🔥 SÉCURISATION : Cette fonction ne provoquera plus jamais de bug undefined / slice
 function getInitiales(prenom, nom) {
   const p = prenom && typeof prenom === 'string' && prenom.length > 0 ? prenom[0].toUpperCase() : ''
   const n = nom && typeof nom === 'string' && nom.length > 0 ? nom[0].toUpperCase() : ''
@@ -1053,9 +923,7 @@ async function comptabiliserVue() {
   if (!actualSalonId || actualSalonId === 'default') return
   await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/view/${actualSalonId}`, {
     method: 'POST',
-    body: {
-      type: salon.value.typeResultat || 'firm'
-    }
+    body: { type: salon.value.typeResultat || 'firm' }
   })
 }
 
@@ -1064,10 +932,7 @@ async function comptabiliserConversion(action) {
     const actualSalonId = salon.value._id || salonId.value;
     await $fetch(`https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/track/conversion/${actualSalonId}`, {
       method: 'POST',
-      body: {
-        type: salon.value.typeResultat || 'firm',
-        action
-      }
+      body: { type: salon.value.typeResultat || 'firm', action }
     })
   } catch (error) {
     console.error('Erreur conversion tracking:', error)
@@ -1082,10 +947,7 @@ async function soumettreReclamation() {
     const actualSalonId = salon.value._id || salonId.value;
     const response = await $fetch('https://bookmysalon-967a856b16b6.herokuapp.com/api/prospect/claim', {
       method: 'POST',
-      body: {
-        prospectId: actualSalonId,
-        ...claimForm.value
-      }
+      body: { prospectId: actualSalonId, ...claimForm.value }
     })
     if (response.success) {
       alert(response.message)
