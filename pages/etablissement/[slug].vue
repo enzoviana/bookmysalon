@@ -741,24 +741,23 @@ const isRevendique = computed(() => salon.value?.isActive === true)
 
 // 🔥 Extraction intelligente de la ville pour le ciblage local SEO
 const extraireVille = () => {
-  if (salon.value?.ville) return salon.value.ville
-  if (!salon.value?.adresse) return 'Paris' // Valeur de repli logique si vide
-  const parts = salon.value.adresse.split(',')
+  if (!salon.value?.adresse && !salon.value?.ville) return ''
+  if (salon.value.ville) return salon.value.ville
+
+  const adresse = salon.value.adresse || ''
+  const parts = adresse.split(',')
   if (parts.length >= 2) {
-    return parts[parts.length - 1].trim().replace(/^\d{5}\s*/, '')
+    const dernierePart = parts[parts.length - 1].trim()
+    return dernierePart.replace(/^\d{5}\s*/, '')
   }
-  return 'Paris'
+
+  const match = adresse.match(/,\s*([A-Za-zÀ-ÿ\s-]+)$/i)
+  return match ? match[1].trim() : ''
 }
 
 const getPrestationPrincipale = () => {
-  if (!salon.value?.categories || salon.value.categories.length === 0) {
-    // Si la description contient des mots-clés, on s'en sert en secours
-    const desc = (salon.value?.description || '').toLowerCase()
-    if (desc.includes('ongles') || desc.includes('manucure')) return 'Bar à ongles'
-    if (desc.includes('coiffure') || desc.includes('cheveux')) return 'Salon de coiffure'
-    return 'Institut de beauté'
-  }
-  return salon.value.categories[0]?.nom || 'Institut de beauté'
+  if (!salon.value?.categories || salon.value.categories.length === 0) return 'Beauté & Bien-être'
+  return salon.value.categories[0].nom || 'Beauté & Bien-être'
 }
 
 // 🔥 Titre SEO ultra-percutant pour Google Search
@@ -766,15 +765,33 @@ const titreSEO = computed(() => {
   const nom = salon.value?.nom_societe || 'Salon'
   const prestation = getPrestationPrincipale()
   const ville = extraireVille()
-  return `${nom} - ${prestation} à ${ville}`
+
+  let titre = ville ? `${nom} - ${prestation} à ${ville} | BookMySalon` : `${nom} - ${prestation} | BookMySalon`
+
+  if (titre.length > 60) {
+    const nomCourt = nom.substring(0, 30)
+    titre = ville ? `${nomCourt} - ${prestation} à ${ville}` : `${nomCourt} - ${prestation}`
+  }
+  return titre
 })
 
 // 🔥 Meta description unique anti-duplicate content (Injection dynamique de services)
 const descriptionSEO = computed(() => {
-  const nom = salon.value?.nom_societe || 'votre salon'
+  const nom = salon.value?.nom_societe || 'notre salon'
   const ville = extraireVille()
-  const prestations = getListeCategories()
-  return `Réservez un rendez-vous chez ${nom} à ${ville}. Prestations : ${prestations}. Retrouvez les tarifs, avis clients et horaires.`
+  
+  const listeServices = salon.value?.categories
+    ? salon.value.categories.map(c => c.nom).slice(0, 3).join(', ')
+    : 'Beauté et Bien-être'
+
+  let description = ville 
+    ? `Réservez un rendez-vous chez ${nom} à ${ville}. Prestations : ${listeServices}. Retrouvez les tarifs, avis clients et horaires.`
+    : `Réservez un rendez-vous chez ${nom}. Prestations : ${listeServices}. Retrouvez les tarifs, avis clients et horaires.`
+
+  if (description.length > 155) {
+    description = description.substring(0, 152) + '...'
+  }
+  return description
 })
 
 // 🔥 Injection des Meta-données OpenGraph et Twitter
