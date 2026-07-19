@@ -356,10 +356,28 @@
                     </span>
                   </div>
                   <div class="flex-1 p-4 text-[11px] space-y-1.5 font-light text-zinc-500">
-                    <p class="flex justify-between">Établissement <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEtablissement !== null ? noteEtablissement.toFixed(1) : '–' }} / 5</span></p>
-                    <p class="flex justify-between">Prestations <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ notePrestations !== null ? notePrestations.toFixed(1) : '–' }} / 5</span></p>
-                    <p class="flex justify-between">Staff de soin <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">{{ noteEmploye !== null ? noteEmploye.toFixed(1) : '–' }} / 5</span></p>
-
+                    <p class="flex justify-between">
+    Établissement 
+    <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">
+      {{ noteEtablissement !== null ? noteEtablissement.toFixed(1) : (noteGenerale !== null ? noteGenerale.toFixed(1) : '–') }} / 5
+    </span>
+  </p>
+  
+  <!-- Prestations : priorité à sa note, sinon note générale, sinon tiret -->
+  <p class="flex justify-between">
+    Prestations 
+    <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">
+      {{ notePrestations !== null ? notePrestations.toFixed(1) : (noteGenerale !== null ? noteGenerale.toFixed(1) : '–') }} / 5
+    </span>
+  </p>
+  
+  <!-- Staff de soin : priorité à sa note, sinon note générale, sinon tiret -->
+  <p class="flex justify-between">
+    Staff de soin 
+    <span class="font-medium font-mono text-zinc-800 dark:text-zinc-300">
+      {{ noteEmploye !== null ? noteEmploye.toFixed(1) : (noteGenerale !== null ? noteGenerale.toFixed(1) : '–') }} / 5
+    </span>
+  </p>
                     <div class="pt-2 border-t mt-2 border-gray-200 dark:border-zinc-900">
                       <p class="text-center text-[10px] font-normal text-zinc-400 dark:text-zinc-400">
                         Basé sur {{ nombreAvis }} avis client{{ nombreAvis > 1 ? 's' : '' }}
